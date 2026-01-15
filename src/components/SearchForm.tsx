@@ -5,19 +5,11 @@ import { Calendar, MapPin, Users, ArrowRightLeft, Search, ChevronDown } from "lu
 import { DayPicker, DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import "react-day-picker/dist/style.css";
+import { SearchParams, Passengers } from "@/lib/types";
 
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void;
   isLoading?: boolean;
-}
-
-interface SearchParams {
-  origin: string;
-  destination: string;
-  departureDate: string;
-  returnDate: string;
-  passengers: number;
-  tripType: "roundtrip" | "oneway";
 }
 
 const popularAirports = [
@@ -39,7 +31,11 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   const [destination, setDestination] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [singleDate, setSingleDate] = useState<Date | undefined>();
-  const [passengers, setPassengers] = useState(1);
+  const [passengers, setPassengers] = useState<Passengers>({
+    adults: 1,
+    children: 0,
+    infants: 0,
+  });
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -95,6 +91,42 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
       }
     }
     return "Select dates";
+  };
+
+  const getTotalPassengers = () => {
+    return passengers.adults + passengers.children + passengers.infants;
+  };
+
+  const getPassengerDisplayText = () => {
+    const total = getTotalPassengers();
+    if (total === 1) return "1 Traveler";
+    return `${total} Travelers`;
+  };
+
+  const updatePassengers = (type: keyof Passengers, delta: number) => {
+    setPassengers((prev) => {
+      const newValue = prev[type] + delta;
+      const otherPassengers = type === "adults"
+        ? prev.children + prev.infants
+        : type === "children"
+        ? prev.adults + prev.infants
+        : prev.adults + prev.children;
+
+      if (type === "adults") {
+        if (newValue < 1) return prev;
+        if (newValue + otherPassengers > 9) return prev;
+        if (newValue < prev.infants) return prev;
+      } else if (type === "children") {
+        if (newValue < 0) return prev;
+        if (newValue + otherPassengers > 9) return prev;
+      } else {
+        if (newValue < 0) return prev;
+        if (newValue > prev.adults) return prev;
+        if (newValue + otherPassengers > 9) return prev;
+      }
+
+      return { ...prev, [type]: newValue };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -286,36 +318,99 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           <button
             type="button"
             onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
-            className="w-full lg:w-32 flex items-center gap-2 px-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl hover:border-blue-400 hover:bg-white transition-all text-left"
+            className="w-full lg:w-36 flex items-center gap-2 px-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl hover:border-blue-400 hover:bg-white transition-all text-left"
           >
             <Users className="w-4 h-4 text-indigo-500 shrink-0" />
-            <span className="text-sm text-gray-900 flex-1">{passengers}</span>
+            <span className="text-sm text-gray-900 flex-1 truncate">{getPassengerDisplayText()}</span>
             <ChevronDown className="w-4 h-4 text-gray-400" />
           </button>
 
           {showPassengerDropdown && (
-            <div className="absolute z-50 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-4 right-0">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-gray-700 whitespace-nowrap">Passengers</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPassengers(Math.max(1, passengers - 1))}
-                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
-                    disabled={passengers <= 1}
-                  >
-                    -
-                  </button>
-                  <span className="text-sm font-medium w-6 text-center">{passengers}</span>
-                  <button
-                    type="button"
-                    onClick={() => setPassengers(Math.min(9, passengers + 1))}
-                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
-                    disabled={passengers >= 9}
-                  >
-                    +
-                  </button>
+            <div className="absolute z-50 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-4 right-0">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Adults</div>
+                    <div className="text-xs text-gray-500">Age 12+</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("adults", -1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                      disabled={passengers.adults <= 1 || passengers.adults <= passengers.infants}
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-medium w-6 text-center">{passengers.adults}</span>
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("adults", 1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                      disabled={getTotalPassengers() >= 9}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Children</div>
+                    <div className="text-xs text-gray-500">Age 2-11</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("children", -1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                      disabled={passengers.children <= 0}
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-medium w-6 text-center">{passengers.children}</span>
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("children", 1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                      disabled={getTotalPassengers() >= 9}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Infants</div>
+                    <div className="text-xs text-gray-500">Under 2 (on lap)</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("infants", -1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                      disabled={passengers.infants <= 0}
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-medium w-6 text-center">{passengers.infants}</span>
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("infants", 1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                      disabled={passengers.infants >= passengers.adults || getTotalPassengers() >= 9}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {passengers.infants > 0 && (
+                  <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                    Each infant must be accompanied by an adult
+                  </p>
+                )}
               </div>
             </div>
           )}

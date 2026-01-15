@@ -3,15 +3,7 @@
 import { useState } from "react";
 import SearchForm from "@/components/SearchForm";
 import { Plane, Sparkles } from "lucide-react";
-
-interface SearchParams {
-  origin: string;
-  destination: string;
-  departureDate: string;
-  returnDate: string;
-  passengers: number;
-  tripType: "roundtrip" | "oneway";
-}
+import { SearchParams } from "@/lib/types";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +14,6 @@ export default function Home() {
     setSearchParams(params);
     setTimeout(() => {
       setIsLoading(false);
-      console.log("Search params:", params);
     }, 1000);
   };
 
