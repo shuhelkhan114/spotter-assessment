@@ -2,19 +2,18 @@
 
 import { useState } from "react";
 import SearchForm from "@/components/SearchForm";
+import FlightList from "@/components/FlightList";
+import { useFlightSearch } from "@/hooks/useFlightSearch";
 import { Plane, Sparkles } from "lucide-react";
 import { SearchParams } from "@/lib/types";
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  const { flights, isLoading, error, search } = useFlightSearch();
 
-  const handleSearch = (params: SearchParams) => {
-    setIsLoading(true);
+  const handleSearch = async (params: SearchParams) => {
     setSearchParams(params);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    await search(params);
   };
 
   return (
@@ -56,34 +55,17 @@ export default function Home() {
           <div className="lg:col-span-1">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-4">Filters</h3>
-              <p className="text-sm text-gray-500">Filter options</p>
+              <p className="text-sm text-gray-500">Filter options coming soon</p>
             </div>
           </div>
           <div className="lg:col-span-3 space-y-4">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-4">Price Trends</h3>
               <div className="h-48 flex items-center justify-center text-gray-400">
-                Price graph
+                Price graph coming soon
               </div>
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                {isLoading ? "Searching..." : "Available Flights"}
-              </h3>
-              <div className="h-48 flex items-center justify-center text-gray-400">
-                {isLoading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm text-gray-500">Finding the best flights...</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Plane className="w-10 h-10 text-gray-300" />
-                    <span>Flight results will appear here</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <FlightList flights={flights} isLoading={isLoading} error={error} />
           </div>
         </div>
       )}
