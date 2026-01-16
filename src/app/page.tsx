@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import SearchForm from "@/components/SearchForm";
 import FlightList from "@/components/FlightList";
 import PriceGraph from "@/components/PriceGraph";
+import FilterPanel, { FilterState } from "@/components/FilterPanel";
 import { useFlightSearch } from "@/hooks/useFlightSearch";
 import { Plane, Sparkles } from "lucide-react";
 import { SearchParams } from "@/lib/types";
@@ -14,9 +15,37 @@ function HomeContent() {
   const urlSearchParams = useSearchParams();
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
   const [isSticky, setIsSticky] = useState(false);
-  const { flights, isLoading, error, search } = useFlightSearch();
+  const { flights, isLoading, error, search, carriers } = useFlightSearch();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const initialLoadRef = useRef(true);
+  const [filters, setFilters] = useState<FilterState>({
+    stops: [],
+    priceRange: [0, 0],
+    airlines: [],
+  });
+
+  const filteredFlights = useMemo(() => {
+    return flights.filter((flight) => {
+      // Filter by stops
+      if (filters.stops.length > 0 && !filters.stops.includes(flight.stops)) {
+        return false;
+      }
+
+      // Filter by price range
+      if (filters.priceRange[0] > 0 || filters.priceRange[1] > 0) {
+        if (flight.price < filters.priceRange[0] || flight.price > filters.priceRange[1]) {
+          return false;
+        }
+      }
+
+      // Filter by airlines
+      if (filters.airlines.length > 0 && !filters.airlines.includes(flight.airlineCode)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [flights, filters]);
 
   const parseUrlParams = useCallback((): SearchParams | null => {
     const origin = urlSearchParams.get("origin");
@@ -87,6 +116,12 @@ function HomeContent() {
   const handleSearch = async (params: SearchParams) => {
     setSearchParams(params);
     updateUrlParams(params);
+    // Reset filters when performing a new search
+    setFilters({
+      stops: [],
+      priceRange: [0, 0],
+      airlines: [],
+    });
     await search(params);
   };
 
@@ -139,16 +174,20 @@ function HomeContent() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-4">Filters</h3>
-              <p className="text-sm text-gray-500">Filter options coming soon</p>
+              <FilterPanel
+                flights={flights}
+                filters={filters}
+                onFilterChange={setFilters}
+                carriers={carriers}
+              />
             </div>
           </div>
           <div className="lg:col-span-3 space-y-4">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-4">Price Trends</h3>
-              <PriceGraph flights={flights} isLoading={isLoading} />
+              <PriceGraph flights={filteredFlights} isLoading={isLoading} />
             </div>
-            <FlightList flights={flights} isLoading={isLoading} error={error} />
+            <FlightList flights={filteredFlights} isLoading={isLoading} error={error} />
           </div>
         </div>
       )}
