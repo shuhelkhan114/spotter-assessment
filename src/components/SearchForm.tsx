@@ -10,6 +10,8 @@ import { SearchParams, Passengers } from "@/lib/types";
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void;
   isLoading?: boolean;
+  compact?: boolean;
+  initialValues?: SearchParams | null;
 }
 
 const popularAirports = [
@@ -25,17 +27,28 @@ const popularAirports = [
   { code: "AMS", name: "Schiphol", city: "Amsterdam" },
 ];
 
-export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
-  const [tripType, setTripType] = useState<"roundtrip" | "oneway">("roundtrip");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [singleDate, setSingleDate] = useState<Date | undefined>();
-  const [passengers, setPassengers] = useState<Passengers>({
-    adults: 1,
-    children: 0,
-    infants: 0,
+export default function SearchForm({ onSearch, isLoading, compact = false, initialValues }: SearchFormProps) {
+  const [tripType, setTripType] = useState<"roundtrip" | "oneway">(initialValues?.tripType || "roundtrip");
+  const [origin, setOrigin] = useState(initialValues?.origin || "");
+  const [destination, setDestination] = useState(initialValues?.destination || "");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (initialValues?.departureDate) {
+      return {
+        from: new Date(initialValues.departureDate),
+        to: initialValues.returnDate ? new Date(initialValues.returnDate) : undefined,
+      };
+    }
+    return undefined;
   });
+  const [singleDate, setSingleDate] = useState<Date | undefined>(() => {
+    if (initialValues?.tripType === "oneway" && initialValues?.departureDate) {
+      return new Date(initialValues.departureDate);
+    }
+    return undefined;
+  });
+  const [passengers, setPassengers] = useState<Passengers>(
+    initialValues?.passengers || { adults: 1, children: 0, infants: 0 }
+  );
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -43,6 +56,25 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
 
   const datePickerRef = useRef<HTMLDivElement>(null);
   const passengerRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (initialValues && !initializedRef.current) {
+      setTripType(initialValues.tripType);
+      setOrigin(initialValues.origin);
+      setDestination(initialValues.destination);
+      setPassengers(initialValues.passengers);
+      if (initialValues.tripType === "roundtrip") {
+        setDateRange({
+          from: new Date(initialValues.departureDate),
+          to: initialValues.returnDate ? new Date(initialValues.returnDate) : undefined,
+        });
+      } else {
+        setSingleDate(new Date(initialValues.departureDate));
+      }
+      initializedRef.current = true;
+    }
+  }, [initialValues]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -147,6 +179,228 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
       tripType,
     });
   };
+
+  if (compact) {
+    return (
+      <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row items-center gap-3">
+        <div className="flex-1 flex flex-col sm:flex-row gap-2 w-full">
+          <div className="relative flex-1">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
+              <input
+                type="text"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                onFocus={() => setShowOriginDropdown(true)}
+                onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
+                placeholder="From"
+                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
+                required
+              />
+            </div>
+            {showOriginDropdown && filteredOriginAirports.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+                {filteredOriginAirports.slice(0, 5).map((airport) => (
+                  <button
+                    key={airport.code}
+                    type="button"
+                    onClick={() => {
+                      setOrigin(airport.code);
+                      setShowOriginDropdown(false);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
+                  >
+                    {airport.city} ({airport.code})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSwapLocations}
+            className="hidden sm:flex w-8 h-8 bg-gray-100 rounded-lg items-center justify-center hover:bg-gray-200 transition-colors self-center shrink-0"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 text-gray-600" />
+          </button>
+
+          <div className="relative flex-1">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500" />
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                onFocus={() => setShowDestinationDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 200)}
+                placeholder="To"
+                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
+                required
+              />
+            </div>
+            {showDestinationDropdown && filteredDestinationAirports.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+                {filteredDestinationAirports.slice(0, 5).map((airport) => (
+                  <button
+                    key={airport.code}
+                    type="button"
+                    onClick={() => {
+                      setDestination(airport.code);
+                      setShowDestinationDropdown(false);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
+                  >
+                    {airport.city} ({airport.code})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="relative" ref={datePickerRef}>
+          <button
+            type="button"
+            onClick={() => setShowDatePicker(!showDatePicker)}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm whitespace-nowrap"
+          >
+            <Calendar className="w-4 h-4 text-blue-500" />
+            <span className={dateRange?.from || singleDate ? "text-gray-900" : "text-gray-500"}>
+              {getDateDisplayText()}
+            </span>
+          </button>
+          {showDatePicker && (
+            <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-4 right-0">
+              {tripType === "roundtrip" ? (
+                <DayPicker
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  disabled={{ before: new Date() }}
+                  className="!font-sans"
+                />
+              ) : (
+                <DayPicker
+                  mode="single"
+                  selected={singleDate}
+                  onSelect={setSingleDate}
+                  disabled={{ before: new Date() }}
+                  className="!font-sans"
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={passengerRef}>
+          <button
+            type="button"
+            onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm whitespace-nowrap"
+          >
+            <Users className="w-4 h-4 text-indigo-500" />
+            <span className="text-gray-900">{getPassengerDisplayText()}</span>
+          </button>
+          {showPassengerDropdown && (
+            <div className="absolute z-50 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-4 right-0">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Adults</div>
+                    <div className="text-xs text-gray-500">Age 12+</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("adults", -1)}
+                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={passengers.adults <= 1 || passengers.adults <= passengers.infants}
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-medium w-5 text-center">{passengers.adults}</span>
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("adults", 1)}
+                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={getTotalPassengers() >= 9}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Children</div>
+                    <div className="text-xs text-gray-500">Age 2-11</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("children", -1)}
+                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={passengers.children <= 0}
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-medium w-5 text-center">{passengers.children}</span>
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("children", 1)}
+                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={getTotalPassengers() >= 9}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Infants</div>
+                    <div className="text-xs text-gray-500">Under 2</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("infants", -1)}
+                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={passengers.infants <= 0}
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-medium w-5 text-center">{passengers.infants}</span>
+                    <button
+                      type="button"
+                      onClick={() => updatePassengers("infants", 1)}
+                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={passengers.infants >= passengers.adults || getTotalPassengers() >= 9}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-70 flex items-center gap-2 text-sm"
+        >
+          {isLoading ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Search className="w-4 h-4" />
+          )}
+          <span>Search</span>
+        </button>
+      </form>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200/50 p-6 shadow-2xl shadow-gray-900/10">
