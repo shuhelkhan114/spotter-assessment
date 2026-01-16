@@ -82,6 +82,53 @@ export interface FlightSearchResponse {
   };
 }
 
+export interface AirportLocation {
+  type: string;
+  subType: string;
+  name: string;
+  detailedName: string;
+  id: string;
+  iataCode: string;
+  address: {
+    cityName: string;
+    cityCode: string;
+    countryName: string;
+    countryCode: string;
+  };
+}
+
+export interface AirportSearchResponse {
+  data: AirportLocation[];
+}
+
+export async function searchAirports(keyword: string): Promise<AirportSearchResponse> {
+  const token = await getAccessToken();
+
+  const searchParams = new URLSearchParams({
+    subType: "AIRPORT,CITY",
+    keyword: keyword,
+    "page[limit]": "10",
+    sort: "analytics.travelers.score",
+    view: "LIGHT",
+  });
+
+  const response = await fetch(
+    `${AMADEUS_API_URL}/v1/reference-data/locations?${searchParams.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.errors?.[0]?.detail || "Failed to search airports");
+  }
+
+  return response.json();
+}
+
 export async function searchFlights(
   params: FlightSearchParams
 ): Promise<FlightSearchResponse> {

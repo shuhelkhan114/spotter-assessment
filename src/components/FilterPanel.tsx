@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Flight } from "@/lib/types";
-import { X, RotateCcw, Check, Plane, Clock } from "lucide-react";
+import { X, RotateCcw, Check, Plane, Clock, ChevronDown, ChevronUp } from "lucide-react";
 
 export interface FilterState {
   stops: number[];
@@ -15,6 +15,7 @@ interface FilterPanelProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
   carriers: Record<string, string>;
+  isLoading?: boolean;
 }
 
 // Custom checkbox component
@@ -203,12 +204,68 @@ function DualRangeSlider({
   );
 }
 
+// Skeleton component for loading state
+function FilterSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="h-5 bg-gray-200 rounded w-16" />
+      </div>
+
+      {/* Stops skeleton */}
+      <div className="space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-12" />
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 bg-gray-100 rounded-xl" />
+          ))}
+        </div>
+      </div>
+
+      {/* Price range skeleton */}
+      <div className="space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-20" />
+        <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-center">
+              <div className="h-3 bg-gray-200 rounded w-8 mb-2" />
+              <div className="h-6 bg-gray-200 rounded w-16" />
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-8 h-px bg-gray-200" />
+            </div>
+            <div className="text-center">
+              <div className="h-3 bg-gray-200 rounded w-8 mb-2" />
+              <div className="h-6 bg-gray-200 rounded w-16" />
+            </div>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full" />
+        </div>
+      </div>
+
+      {/* Airlines skeleton */}
+      <div className="space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-16" />
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-12 bg-gray-100 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FilterPanel({
   flights,
   filters,
   onFilterChange,
   carriers,
+  isLoading = false,
 }: FilterPanelProps) {
+  const [showAllAirlines, setShowAllAirlines] = useState(false);
+  const AIRLINES_INITIAL_SHOW = 4;
+
   const priceStats = useMemo(() => {
     if (flights.length === 0) return { min: 0, max: 1000 };
     const prices = flights.map((f) => f.price);
@@ -296,6 +353,11 @@ export default function FilterPanel({
     if (stop === 0) return <Plane className="w-4 h-4 text-green-500" />;
     return <Clock className="w-4 h-4 text-orange-500" />;
   };
+
+  // Show skeleton when loading
+  if (isLoading) {
+    return <FilterSkeleton />;
+  }
 
   if (flights.length === 0) {
     return (
@@ -390,8 +452,8 @@ export default function FilterPanel({
             <h4 className="text-sm font-medium text-gray-700">Airlines</h4>
             <span className="text-xs text-gray-400">{availableAirlines.length} available</span>
           </div>
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
-            {availableAirlines.map((airline) => (
+          <div className="space-y-2">
+            {(showAllAirlines ? availableAirlines : availableAirlines.slice(0, AIRLINES_INITIAL_SHOW)).map((airline) => (
               <CustomCheckbox
                 key={airline.code}
                 checked={filters.airlines.includes(airline.code)}
@@ -401,6 +463,24 @@ export default function FilterPanel({
               />
             ))}
           </div>
+          {availableAirlines.length > AIRLINES_INITIAL_SHOW && (
+            <button
+              onClick={() => setShowAllAirlines(!showAllAirlines)}
+              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              {showAllAirlines ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  See all ({availableAirlines.length})
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 

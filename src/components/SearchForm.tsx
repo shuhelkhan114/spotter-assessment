@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Calendar, MapPin, Users, ArrowRightLeft, Search, ChevronDown } from "lucide-react";
+import { Calendar, MapPin, Users, ArrowRightLeft, Search, ChevronDown, Loader2 } from "lucide-react";
 import { DayPicker, DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import "react-day-picker/dist/style.css";
 import { SearchParams, Passengers } from "@/lib/types";
+import { useAirportSearch, Airport } from "@/hooks/useAirportSearch";
 
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void;
@@ -13,19 +14,6 @@ interface SearchFormProps {
   compact?: boolean;
   initialValues?: SearchParams | null;
 }
-
-const popularAirports = [
-  { code: "JFK", name: "John F. Kennedy International", city: "New York" },
-  { code: "LAX", name: "Los Angeles International", city: "Los Angeles" },
-  { code: "LHR", name: "Heathrow", city: "London" },
-  { code: "CDG", name: "Charles de Gaulle", city: "Paris" },
-  { code: "DXB", name: "Dubai International", city: "Dubai" },
-  { code: "SIN", name: "Changi", city: "Singapore" },
-  { code: "HND", name: "Haneda", city: "Tokyo" },
-  { code: "SYD", name: "Sydney Kingsford Smith", city: "Sydney" },
-  { code: "FRA", name: "Frankfurt", city: "Frankfurt" },
-  { code: "AMS", name: "Schiphol", city: "Amsterdam" },
-];
 
 export default function SearchForm({ onSearch, isLoading, compact = false, initialValues }: SearchFormProps) {
   const [tripType, setTripType] = useState<"roundtrip" | "oneway">(initialValues?.tripType || "roundtrip");
@@ -58,6 +46,36 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
   const passengerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
 
+  // Airport search hooks
+  const originSearch = useAirportSearch();
+  const destinationSearch = useAirportSearch();
+
+  // Handle origin input change
+  const handleOriginChange = (value: string) => {
+    setOrigin(value);
+    originSearch.search(value);
+  };
+
+  // Handle destination input change
+  const handleDestinationChange = (value: string) => {
+    setDestination(value);
+    destinationSearch.search(value);
+  };
+
+  // Select airport for origin
+  const selectOriginAirport = (airport: Airport) => {
+    setOrigin(airport.code);
+    setShowOriginDropdown(false);
+    originSearch.clear();
+  };
+
+  // Select airport for destination
+  const selectDestinationAirport = (airport: Airport) => {
+    setDestination(airport.code);
+    setShowDestinationDropdown(false);
+    destinationSearch.clear();
+  };
+
   useEffect(() => {
     if (initialValues && !initializedRef.current) {
       setTripType(initialValues.tripType);
@@ -88,20 +106,6 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const filteredOriginAirports = popularAirports.filter(
-    (airport) =>
-      airport.code.toLowerCase().includes(origin.toLowerCase()) ||
-      airport.city.toLowerCase().includes(origin.toLowerCase()) ||
-      airport.name.toLowerCase().includes(origin.toLowerCase())
-  );
-
-  const filteredDestinationAirports = popularAirports.filter(
-    (airport) =>
-      airport.code.toLowerCase().includes(destination.toLowerCase()) ||
-      airport.city.toLowerCase().includes(destination.toLowerCase()) ||
-      airport.name.toLowerCase().includes(destination.toLowerCase())
-  );
 
   const handleSwapLocations = () => {
     const temp = origin;
@@ -190,27 +194,29 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               <input
                 type="text"
                 value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
+                onChange={(e) => handleOriginChange(e.target.value)}
                 onFocus={() => setShowOriginDropdown(true)}
                 onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
                 placeholder="From"
                 className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
                 required
               />
+              {originSearch.isLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+              )}
             </div>
-            {showOriginDropdown && filteredOriginAirports.length > 0 && (
+            {showOriginDropdown && originSearch.airports.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
-                {filteredOriginAirports.slice(0, 5).map((airport) => (
+                {originSearch.airports.map((airport) => (
                   <button
-                    key={airport.code}
+                    key={airport.id}
                     type="button"
-                    onClick={() => {
-                      setOrigin(airport.code);
-                      setShowOriginDropdown(false);
-                    }}
+                    onClick={() => selectOriginAirport(airport)}
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
                   >
-                    {airport.city} ({airport.code})
+                    <span className="font-medium">{airport.city}</span>
+                    <span className="text-gray-500"> ({airport.code})</span>
+                    <span className="text-gray-400 text-xs ml-1">{airport.country}</span>
                   </button>
                 ))}
               </div>
@@ -231,27 +237,29 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               <input
                 type="text"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                onChange={(e) => handleDestinationChange(e.target.value)}
                 onFocus={() => setShowDestinationDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 200)}
                 placeholder="To"
                 className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
                 required
               />
+              {destinationSearch.isLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+              )}
             </div>
-            {showDestinationDropdown && filteredDestinationAirports.length > 0 && (
+            {showDestinationDropdown && destinationSearch.airports.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
-                {filteredDestinationAirports.slice(0, 5).map((airport) => (
+                {destinationSearch.airports.map((airport) => (
                   <button
-                    key={airport.code}
+                    key={airport.id}
                     type="button"
-                    onClick={() => {
-                      setDestination(airport.code);
-                      setShowDestinationDropdown(false);
-                    }}
+                    onClick={() => selectDestinationAirport(airport)}
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
                   >
-                    {airport.city} ({airport.code})
+                    <span className="font-medium">{airport.city}</span>
+                    <span className="text-gray-500"> ({airport.code})</span>
+                    <span className="text-gray-400 text-xs ml-1">{airport.country}</span>
                   </button>
                 ))}
               </div>
@@ -440,24 +448,24 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               <input
                 type="text"
                 value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
+                onChange={(e) => handleOriginChange(e.target.value)}
                 onFocus={() => setShowOriginDropdown(true)}
                 onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
                 placeholder="City or airport"
-                className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm"
+                className="w-full pl-10 pr-10 py-3 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm"
                 required
               />
+              {originSearch.isLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+              )}
             </div>
-            {showOriginDropdown && filteredOriginAirports.length > 0 && (
+            {showOriginDropdown && originSearch.airports.length > 0 && (
               <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                {filteredOriginAirports.map((airport) => (
+                {originSearch.airports.map((airport) => (
                   <button
-                    key={airport.code}
+                    key={airport.id}
                     type="button"
-                    onClick={() => {
-                      setOrigin(airport.code);
-                      setShowOriginDropdown(false);
-                    }}
+                    onClick={() => selectOriginAirport(airport)}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
                   >
                     <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
@@ -465,7 +473,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
                       <div className="font-medium text-gray-900 text-sm">
                         {airport.city} ({airport.code})
                       </div>
-                      <div className="text-xs text-gray-500">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.name} - {airport.country}</div>
                     </div>
                   </button>
                 ))}
@@ -491,24 +499,24 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               <input
                 type="text"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                onChange={(e) => handleDestinationChange(e.target.value)}
                 onFocus={() => setShowDestinationDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 200)}
                 placeholder="City or airport"
-                className="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm"
+                className="w-full pl-10 pr-10 py-3 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all text-sm"
                 required
               />
+              {destinationSearch.isLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+              )}
             </div>
-            {showDestinationDropdown && filteredDestinationAirports.length > 0 && (
+            {showDestinationDropdown && destinationSearch.airports.length > 0 && (
               <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                {filteredDestinationAirports.map((airport) => (
+                {destinationSearch.airports.map((airport) => (
                   <button
-                    key={airport.code}
+                    key={airport.id}
                     type="button"
-                    onClick={() => {
-                      setDestination(airport.code);
-                      setShowDestinationDropdown(false);
-                    }}
+                    onClick={() => selectDestinationAirport(airport)}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
                   >
                     <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
@@ -516,7 +524,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
                       <div className="font-medium text-gray-900 text-sm">
                         {airport.city} ({airport.code})
                       </div>
-                      <div className="text-xs text-gray-500">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.name} - {airport.country}</div>
                     </div>
                   </button>
                 ))}

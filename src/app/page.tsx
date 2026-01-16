@@ -74,6 +74,27 @@ function HomeContent() {
     return null;
   }, [urlSearchParams]);
 
+  const parseFilterParams = useCallback((): FilterState | null => {
+    const stopsParam = urlSearchParams.get("stops");
+    const minPrice = urlSearchParams.get("minPrice");
+    const maxPrice = urlSearchParams.get("maxPrice");
+    const airlinesParam = urlSearchParams.get("airlines");
+
+    const hasFilterParams = stopsParam || minPrice || maxPrice || airlinesParam;
+
+    if (hasFilterParams) {
+      return {
+        stops: stopsParam ? stopsParam.split(",").map(Number).filter(n => !isNaN(n)) : [],
+        priceRange: [
+          minPrice ? parseInt(minPrice) : 0,
+          maxPrice ? parseInt(maxPrice) : 0,
+        ],
+        airlines: airlinesParam ? airlinesParam.split(",").filter(Boolean) : [],
+      };
+    }
+    return null;
+  }, [urlSearchParams]);
+
   useEffect(() => {
     if (initialLoadRef.current) {
       const params = parseUrlParams();
@@ -81,9 +102,13 @@ function HomeContent() {
         setSearchParams(params);
         search(params);
       }
+      const filterParams = parseFilterParams();
+      if (filterParams) {
+        setFilters(filterParams);
+      }
       initialLoadRef.current = false;
     }
-  }, [parseUrlParams, search]);
+  }, [parseUrlParams, parseFilterParams, search]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -100,7 +125,7 @@ function HomeContent() {
     return () => observer.disconnect();
   }, []);
 
-  const updateUrlParams = (params: SearchParams) => {
+  const updateUrlParams = (params: SearchParams, filterState?: FilterState) => {
     const url = new URLSearchParams();
     url.set("origin", params.origin);
     url.set("destination", params.destination);
@@ -110,7 +135,31 @@ function HomeContent() {
     if (params.passengers.children > 0) url.set("children", params.passengers.children.toString());
     if (params.passengers.infants > 0) url.set("infants", params.passengers.infants.toString());
     url.set("tripType", params.tripType);
+
+    // Add filter params if provided
+    if (filterState) {
+      if (filterState.stops.length > 0) {
+        url.set("stops", filterState.stops.join(","));
+      }
+      if (filterState.priceRange[0] > 0) {
+        url.set("minPrice", filterState.priceRange[0].toString());
+      }
+      if (filterState.priceRange[1] > 0) {
+        url.set("maxPrice", filterState.priceRange[1].toString());
+      }
+      if (filterState.airlines.length > 0) {
+        url.set("airlines", filterState.airlines.join(","));
+      }
+    }
+
     router.push(`?${url.toString()}`, { scroll: false });
+  };
+
+  const handleFilterChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    if (searchParams) {
+      updateUrlParams(searchParams, newFilters);
+    }
   };
 
   const handleSearch = async (params: SearchParams) => {
@@ -173,12 +222,13 @@ function HomeContent() {
       {searchParams && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
+            <div className="lg:sticky lg:top-24 bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-5 shadow-sm">
               <FilterPanel
                 flights={flights}
                 filters={filters}
-                onFilterChange={setFilters}
+                onFilterChange={handleFilterChange}
                 carriers={carriers}
+                isLoading={isLoading}
               />
             </div>
           </div>
