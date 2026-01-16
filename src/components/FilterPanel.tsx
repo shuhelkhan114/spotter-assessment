@@ -42,9 +42,9 @@ function CustomCheckbox({
           : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50/50"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <div
-          className={`w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 ${
+          className={`w-5 h-5 flex-shrink-0 rounded-md flex items-center justify-center transition-all duration-200 ${
             checked
               ? "bg-blue-500 text-white"
               : "bg-gray-100 border border-gray-200"
@@ -52,10 +52,10 @@ function CustomCheckbox({
         >
           {checked && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
         </div>
-        <div className="flex items-center gap-2">
-          {icon}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {icon && <span className="flex-shrink-0">{icon}</span>}
           <span
-            className={`text-sm font-medium ${
+            className={`text-sm font-medium truncate ${
               checked ? "text-gray-900" : "text-gray-600"
             }`}
           >

@@ -11,6 +11,10 @@ export interface SearchParams {
   returnDate: string;
   passengers: Passengers;
   tripType: "roundtrip" | "oneway";
+  // API-level filters (optional)
+  nonStop?: boolean;
+  maxPrice?: number;
+  includedAirlineCodes?: string[];
 }
 
 export interface Flight {

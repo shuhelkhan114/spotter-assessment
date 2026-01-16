@@ -81,6 +81,11 @@ export async function GET(request: Request) {
   const children = searchParams.get("children");
   const infants = searchParams.get("infants");
 
+  // API-level filter parameters
+  const nonStop = searchParams.get("nonStop");
+  const maxPrice = searchParams.get("maxPrice");
+  const includedAirlineCodes = searchParams.get("includedAirlineCodes");
+
   if (!origin || !destination || !departureDate || !adults) {
     return NextResponse.json(
       { error: "Missing required parameters" },
@@ -174,6 +179,10 @@ export async function GET(request: Request) {
       adults: adultsNum,
       children: childrenNum,
       infants: infantsNum,
+      // API-level filters
+      nonStop: nonStop === "true",
+      maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
+      includedAirlineCodes: includedAirlineCodes ? includedAirlineCodes.split(",").filter(Boolean) : undefined,
     });
 
     const carriers = response.dictionaries?.carriers || {};

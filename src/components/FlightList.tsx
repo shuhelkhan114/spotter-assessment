@@ -1,13 +1,43 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { Flight } from "@/lib/types";
 import FlightCard from "./FlightCard";
-import { Plane, AlertCircle } from "lucide-react";
+import { Plane, AlertCircle, ArrowUpDown, ChevronDown } from "lucide-react";
+
+type SortOption = "price" | "duration" | "departure" | "stops";
 
 interface FlightListProps {
   flights: Flight[];
   isLoading: boolean;
   error: string | null;
+  totalCount?: number;
+}
+
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: "price", label: "Price (lowest)" },
+  { value: "duration", label: "Duration (shortest)" },
+  { value: "departure", label: "Departure (earliest)" },
+  { value: "stops", label: "Stops (fewest)" },
+];
+
+function parseDuration(duration: string): number {
+  // Parse ISO 8601 duration format like "PT2H30M" or simple "2h 30m"
+  const isoMatch = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (isoMatch) {
+    const hours = parseInt(isoMatch[1] || "0");
+    const minutes = parseInt(isoMatch[2] || "0");
+    return hours * 60 + minutes;
+  }
+
+  const simpleMatch = duration.match(/(\d+)h\s*(?:(\d+)m)?/i);
+  if (simpleMatch) {
+    const hours = parseInt(simpleMatch[1] || "0");
+    const minutes = parseInt(simpleMatch[2] || "0");
+    return hours * 60 + minutes;
+  }
+
+  return 0;
 }
 
 function FlightSkeleton() {
@@ -50,7 +80,32 @@ function FlightSkeleton() {
   );
 }
 
-export default function FlightList({ flights, isLoading, error }: FlightListProps) {
+export default function FlightList({ flights, isLoading, error, totalCount }: FlightListProps) {
+  const [sortBy, setSortBy] = useState<SortOption>("price");
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+  const sortedFlights = useMemo(() => {
+    return [...flights].sort((a, b) => {
+      switch (sortBy) {
+        case "price":
+          return a.price - b.price;
+        case "duration":
+          return parseDuration(a.duration) - parseDuration(b.duration);
+        case "departure":
+          return new Date(a.departure.time).getTime() - new Date(b.departure.time).getTime();
+        case "stops":
+          return a.stops - b.stops;
+        default:
+          return 0;
+      }
+    });
+  }, [flights, sortBy]);
+
+  const cheapestPrice = useMemo(() => {
+    if (flights.length === 0) return 0;
+    return Math.min(...flights.map((f) => f.price));
+  }, [flights]);
+
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
@@ -87,19 +142,58 @@ export default function FlightList({ flights, isLoading, error }: FlightListProp
     );
   }
 
-  const sortedFlights = [...flights].sort((a, b) => a.price - b.price);
-  const cheapestPrice = sortedFlights[0]?.price;
+  const isFiltered = totalCount !== undefined && totalCount > flights.length;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">
-          {flights.length} flight{flights.length !== 1 ? "s" : ""} found
-        </h3>
-        <span className="text-sm text-gray-500">
-          Prices from <span className="font-semibold text-gray-900">${cheapestPrice?.toLocaleString()}</span>
-        </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-gray-900">
+            {flights.length} flight{flights.length !== 1 ? "s" : ""}
+            {isFiltered && (
+              <span className="text-gray-500 font-normal"> of {totalCount}</span>
+            )}
+          </h3>
+          <span className="text-sm text-gray-500">
+            Prices from <span className="font-semibold text-gray-900">${cheapestPrice.toLocaleString()}</span>
+          </span>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSortDropdown(!showSortDropdown)}
+            onBlur={() => setTimeout(() => setShowSortDropdown(false), 200)}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <ArrowUpDown className="w-4 h-4 text-gray-400" />
+            <span>{sortOptions.find((o) => o.value === sortBy)?.label}</span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showSortDropdown ? "rotate-180" : ""}`} />
+          </button>
+
+          {showSortDropdown && (
+            <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+              {sortOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    setSortBy(option.value);
+                    setShowSortDropdown(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                    sortBy === option.value
+                      ? "text-blue-600 font-medium bg-blue-50"
+                      : "text-gray-700"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
       {sortedFlights.map((flight) => (
         <FlightCard key={flight.id} flight={flight} />
       ))}

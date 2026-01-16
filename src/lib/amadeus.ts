@@ -39,7 +39,10 @@ export interface FlightSearchParams {
   adults: number;
   children?: number;
   infants?: number;
+  // API-level filters
   nonStop?: boolean;
+  maxPrice?: number;
+  includedAirlineCodes?: string[];
 }
 
 export interface FlightOffer {
@@ -157,6 +160,14 @@ export async function searchFlights(
 
   if (params.nonStop) {
     searchParams.append("nonStop", "true");
+  }
+
+  if (params.maxPrice && params.maxPrice > 0) {
+    searchParams.append("maxPrice", params.maxPrice.toString());
+  }
+
+  if (params.includedAirlineCodes && params.includedAirlineCodes.length > 0) {
+    searchParams.append("includedAirlineCodes", params.includedAirlineCodes.join(","));
   }
 
   const response = await fetch(

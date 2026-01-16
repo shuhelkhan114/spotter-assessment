@@ -57,8 +57,13 @@ function HomeContent() {
     const infants = urlSearchParams.get("infants");
     const tripType = urlSearchParams.get("tripType") as "roundtrip" | "oneway";
 
+    // API-level filter params from URL
+    const stopsParam = urlSearchParams.get("stops");
+    const maxPrice = urlSearchParams.get("maxPrice");
+    const airlinesParam = urlSearchParams.get("airlines");
+
     if (origin && destination && departureDate && adults) {
-      return {
+      const params: SearchParams = {
         origin,
         destination,
         departureDate,
@@ -70,6 +75,24 @@ function HomeContent() {
         },
         tripType: tripType || (returnDate ? "roundtrip" : "oneway"),
       };
+
+      // Add API-level filters if present in URL
+      // nonStop: only if stops filter is exactly [0] (nonstop only)
+      if (stopsParam === "0") {
+        params.nonStop = true;
+      }
+
+      // maxPrice: pass to API for server-side filtering
+      if (maxPrice) {
+        params.maxPrice = parseInt(maxPrice);
+      }
+
+      // includedAirlineCodes: pass to API for server-side filtering
+      if (airlinesParam) {
+        params.includedAirlineCodes = airlinesParam.split(",").filter(Boolean);
+      }
+
+      return params;
     }
     return null;
   }, [urlSearchParams]);
@@ -237,7 +260,7 @@ function HomeContent() {
               <h3 className="font-semibold text-gray-900 mb-4">Price Trends</h3>
               <PriceGraph flights={filteredFlights} isLoading={isLoading} />
             </div>
-            <FlightList flights={filteredFlights} isLoading={isLoading} error={error} />
+            <FlightList flights={filteredFlights} isLoading={isLoading} error={error} totalCount={flights.length} />
           </div>
         </div>
       )}

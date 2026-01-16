@@ -41,6 +41,19 @@ export function useFlightSearch(): UseFlightSearchReturn {
         searchParams.append("returnDate", params.returnDate);
       }
 
+      // API-level filters
+      if (params.nonStop) {
+        searchParams.append("nonStop", "true");
+      }
+
+      if (params.maxPrice && params.maxPrice > 0) {
+        searchParams.append("maxPrice", params.maxPrice.toString());
+      }
+
+      if (params.includedAirlineCodes && params.includedAirlineCodes.length > 0) {
+        searchParams.append("includedAirlineCodes", params.includedAirlineCodes.join(","));
+      }
+
       const response = await fetch(`/api/flights?${searchParams.toString()}`);
 
       if (!response.ok) {
