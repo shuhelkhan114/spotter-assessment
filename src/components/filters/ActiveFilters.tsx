@@ -23,11 +23,16 @@ export function ActiveFilters({
   onRemoveAirline,
   onResetPrice,
 }: ActiveFiltersProps) {
+  // Check if price range is actually set (not default [0, 0])
+  const isPriceRangeSet = priceRange[0] > 0 || priceRange[1] > 0;
+  const hasPriceFilter = isPriceRangeSet && (
+    priceRange[0] > priceStats.min || priceRange[1] < priceStats.max
+  );
+
   const hasActiveFilters =
     stops.length > 0 ||
     airlines.length > 0 ||
-    priceRange[0] > priceStats.min ||
-    priceRange[1] < priceStats.max;
+    hasPriceFilter;
 
   if (!hasActiveFilters) return null;
 
@@ -61,7 +66,7 @@ export function ActiveFilters({
             <X className="w-3 h-3 opacity-60 group-hover:opacity-100" />
           </button>
         ))}
-        {(priceRange[0] > priceStats.min || priceRange[1] < priceStats.max) && (
+        {hasPriceFilter && (
           <button
             onClick={onResetPrice}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group cursor-pointer"
