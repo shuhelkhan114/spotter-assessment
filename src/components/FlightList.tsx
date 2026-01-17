@@ -3,7 +3,9 @@
 import { useState, useMemo } from "react";
 import { Flight } from "@/lib/types";
 import FlightCard from "./FlightCard";
-import { Plane, AlertCircle, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Plane, AlertCircle, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+
+const ITEMS_PER_PAGE = 20;
 
 type SortOption = "price" | "duration" | "departure" | "stops";
 
@@ -83,6 +85,7 @@ function FlightSkeleton() {
 export default function FlightList({ flights, isLoading, error, totalCount }: FlightListProps) {
   const [sortBy, setSortBy] = useState<SortOption>("price");
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const sortedFlights = useMemo(() => {
     return [...flights].sort((a, b) => {
@@ -100,6 +103,15 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
       }
     });
   }, [flights, sortBy]);
+
+  // Reset page when flights change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [flights.length]);
+
+  const totalPages = Math.ceil(sortedFlights.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedFlights = sortedFlights.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const cheapestPrice = useMemo(() => {
     if (flights.length === 0) return 0;
@@ -164,7 +176,7 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
           <button
             onClick={() => setShowSortDropdown(!showSortDropdown)}
             onBlur={() => setTimeout(() => setShowSortDropdown(false), 200)}
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <ArrowUpDown className="w-4 h-4 text-gray-400" />
             <span>{sortOptions.find((o) => o.value === sortBy)?.label}</span>
@@ -180,7 +192,7 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
                     setSortBy(option.value);
                     setShowSortDropdown(false);
                   }}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
                     sortBy === option.value
                       ? "text-blue-600 font-medium bg-blue-50"
                       : "text-gray-700"
@@ -194,9 +206,65 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
         </div>
       </div>
 
-      {sortedFlights.map((flight) => (
+      {paginatedFlights.map((flight) => (
         <FlightCard key={flight.id} flight={flight} />
       ))}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div className="text-sm text-gray-500">
+            Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, sortedFlights.length)} of {sortedFlights.length} flights
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-9 h-9 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                      currentPage === pageNum
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

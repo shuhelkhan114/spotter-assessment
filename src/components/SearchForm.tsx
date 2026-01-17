@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Calendar, MapPin, Users, ArrowRightLeft, Search, ChevronDown, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Users, ArrowRightLeft, Search, ChevronDown, Loader2, Plane, Building2 } from "lucide-react";
 import { DayPicker, DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import "react-day-picker/dist/style.css";
@@ -206,17 +206,28 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               )}
             </div>
             {showOriginDropdown && originSearch.airports.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
-                {originSearch.airports.map((airport) => (
+              <div className="absolute z-50 min-w-[340px] mt-1 bg-white border border-gray-200 rounded-xl shadow-xl">
+                {originSearch.airports.slice(0, 10).map((airport) => (
                   <button
                     key={airport.id}
                     type="button"
                     onClick={() => selectOriginAirport(airport)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
+                    className="w-full px-3 py-2.5 text-left hover:bg-blue-50 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-0 transition-colors"
                   >
-                    <span className="font-medium">{airport.city}</span>
-                    <span className="text-gray-500"> ({airport.code})</span>
-                    <span className="text-gray-400 text-xs ml-1">{airport.country}</span>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      airport.type === "AIRPORT" ? "bg-blue-50" : "bg-purple-50"
+                    }`}>
+                      {airport.type === "AIRPORT" ? (
+                        <Plane className="w-4 h-4 text-blue-500" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-purple-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 text-sm truncate">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.city}</div>
+                    </div>
+                    <div className="font-bold text-blue-600 text-sm shrink-0">{airport.code}</div>
                   </button>
                 ))}
               </div>
@@ -226,7 +237,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="button"
             onClick={handleSwapLocations}
-            className="hidden sm:flex w-8 h-8 bg-gray-100 rounded-lg items-center justify-center hover:bg-gray-200 transition-colors self-center shrink-0"
+            className="hidden sm:flex w-8 h-8 bg-gray-100 rounded-lg items-center justify-center hover:bg-gray-200 transition-colors self-center shrink-0 cursor-pointer"
           >
             <ArrowRightLeft className="w-3.5 h-3.5 text-gray-600" />
           </button>
@@ -249,17 +260,28 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               )}
             </div>
             {showDestinationDropdown && destinationSearch.airports.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
-                {destinationSearch.airports.map((airport) => (
+              <div className="absolute z-50 min-w-[340px] mt-1 bg-white border border-gray-200 rounded-xl shadow-xl">
+                {destinationSearch.airports.slice(0, 10).map((airport) => (
                   <button
                     key={airport.id}
                     type="button"
                     onClick={() => selectDestinationAirport(airport)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
+                    className="w-full px-3 py-2.5 text-left hover:bg-indigo-50 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-0 transition-colors"
                   >
-                    <span className="font-medium">{airport.city}</span>
-                    <span className="text-gray-500"> ({airport.code})</span>
-                    <span className="text-gray-400 text-xs ml-1">{airport.country}</span>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      airport.type === "AIRPORT" ? "bg-indigo-50" : "bg-purple-50"
+                    }`}>
+                      {airport.type === "AIRPORT" ? (
+                        <Plane className="w-4 h-4 text-indigo-500" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-purple-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 text-sm truncate">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.city}</div>
+                    </div>
+                    <div className="font-bold text-indigo-600 text-sm shrink-0">{airport.code}</div>
                   </button>
                 ))}
               </div>
@@ -271,7 +293,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="button"
             onClick={() => setShowDatePicker(!showDatePicker)}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm whitespace-nowrap"
+            className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm whitespace-nowrap cursor-pointer"
           >
             <Calendar className="w-4 h-4 text-blue-500" />
             <span className={dateRange?.from || singleDate ? "text-gray-900" : "text-gray-500"}>
@@ -306,7 +328,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="button"
             onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm whitespace-nowrap"
+            className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm whitespace-nowrap cursor-pointer"
           >
             <Users className="w-4 h-4 text-indigo-500" />
             <span className="text-gray-900">{getPassengerDisplayText()}</span>
@@ -397,7 +419,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
         <button
           type="submit"
           disabled={isLoading}
-          className="px-5 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-70 flex items-center gap-2 text-sm"
+          className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 text-sm shadow-md shadow-blue-500/20"
         >
           {isLoading ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -416,7 +438,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
         <button
           type="button"
           onClick={() => setTripType("roundtrip")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer ${
             tripType === "roundtrip"
               ? "bg-white text-blue-600 shadow-sm"
               : "text-gray-500 hover:text-gray-900"
@@ -427,7 +449,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
         <button
           type="button"
           onClick={() => setTripType("oneway")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer ${
             tripType === "oneway"
               ? "bg-white text-blue-600 shadow-sm"
               : "text-gray-500 hover:text-gray-900"
@@ -460,21 +482,28 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               )}
             </div>
             {showOriginDropdown && originSearch.airports.length > 0 && (
-              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                {originSearch.airports.map((airport) => (
+              <div className="absolute z-20 min-w-[360px] mt-1 bg-white border border-gray-200 rounded-xl shadow-xl">
+                {originSearch.airports.slice(0, 10).map((airport) => (
                   <button
                     key={airport.id}
                     type="button"
                     onClick={() => selectOriginAirport(airport)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-0 transition-colors"
                   >
-                    <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">
-                        {airport.city} ({airport.code})
-                      </div>
-                      <div className="text-xs text-gray-500">{airport.name} - {airport.country}</div>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                      airport.type === "AIRPORT" ? "bg-blue-50" : "bg-purple-50"
+                    }`}>
+                      {airport.type === "AIRPORT" ? (
+                        <Plane className="w-4 h-4 text-blue-500" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-purple-500" />
+                      )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.city}</div>
+                    </div>
+                    <div className="font-bold text-blue-600 shrink-0">{airport.code}</div>
                   </button>
                 ))}
               </div>
@@ -484,7 +513,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="button"
             onClick={handleSwapLocations}
-            className="hidden sm:flex absolute left-1/2 top-[30px] -translate-x-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full items-center justify-center hover:bg-gray-50 transition-colors"
+            className="hidden sm:flex absolute left-1/2 top-[30px] -translate-x-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer"
             aria-label="Swap locations"
           >
             <ArrowRightLeft className="w-4 h-4 text-gray-600" />
@@ -511,21 +540,28 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
               )}
             </div>
             {showDestinationDropdown && destinationSearch.airports.length > 0 && (
-              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                {destinationSearch.airports.map((airport) => (
+              <div className="absolute z-20 min-w-[360px] mt-1 bg-white border border-gray-200 rounded-xl shadow-xl">
+                {destinationSearch.airports.slice(0, 10).map((airport) => (
                   <button
                     key={airport.id}
                     type="button"
                     onClick={() => selectDestinationAirport(airport)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
+                    className="w-full px-4 py-3 text-left hover:bg-indigo-50 cursor-pointer flex items-center gap-3 border-b border-gray-100 last:border-0 transition-colors"
                   >
-                    <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                    <div>
-                      <div className="font-medium text-gray-900 text-sm">
-                        {airport.city} ({airport.code})
-                      </div>
-                      <div className="text-xs text-gray-500">{airport.name} - {airport.country}</div>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                      airport.type === "AIRPORT" ? "bg-indigo-50" : "bg-purple-50"
+                    }`}>
+                      {airport.type === "AIRPORT" ? (
+                        <Plane className="w-4 h-4 text-indigo-500" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-purple-500" />
+                      )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.city}</div>
+                    </div>
+                    <div className="font-bold text-indigo-600 shrink-0">{airport.code}</div>
                   </button>
                 ))}
               </div>
@@ -540,7 +576,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="button"
             onClick={() => setShowDatePicker(!showDatePicker)}
-            className="w-full lg:w-64 flex items-center gap-2 px-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl hover:border-blue-400 hover:bg-white transition-all text-left"
+            className="w-full lg:w-64 flex items-center gap-2 px-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl hover:border-blue-400 hover:bg-white transition-all text-left cursor-pointer"
           >
             <Calendar className="w-4 h-4 text-blue-500 shrink-0" />
             <span className={`text-sm flex-1 truncate whitespace-nowrap ${dateRange?.from || singleDate ? "text-gray-900" : "text-gray-500"}`}>
@@ -580,7 +616,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="button"
             onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
-            className="w-full lg:w-36 flex items-center gap-2 px-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl hover:border-blue-400 hover:bg-white transition-all text-left"
+            className="w-full lg:w-36 flex items-center gap-2 px-4 py-3 bg-gray-50/50 border border-gray-300 rounded-xl hover:border-blue-400 hover:bg-white transition-all text-left cursor-pointer"
           >
             <Users className="w-4 h-4 text-indigo-500 shrink-0" />
             <span className="text-sm text-gray-900 flex-1 truncate">{getPassengerDisplayText()}</span>
@@ -682,7 +718,7 @@ export default function SearchForm({ onSearch, isLoading, compact = false, initi
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full lg:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 animate-pulse-glow"
+            className="w-full lg:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

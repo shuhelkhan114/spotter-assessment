@@ -36,7 +36,7 @@ function CustomCheckbox({
     <button
       type="button"
       onClick={onChange}
-      className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
+      className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
         checked
           ? "border-blue-500 bg-blue-50/50"
           : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50/50"
@@ -382,7 +382,7 @@ export default function FilterPanel({
         {hasActiveFilters && (
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
             Reset all
@@ -466,7 +466,7 @@ export default function FilterPanel({
           {availableAirlines.length > AIRLINES_INITIAL_SHOW && (
             <button
               onClick={() => setShowAllAirlines(!showAllAirlines)}
-              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
             >
               {showAllAirlines ? (
                 <>
@@ -493,7 +493,7 @@ export default function FilterPanel({
               <button
                 key={`stop-${stop}`}
                 onClick={() => handleStopsChange(stop)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group cursor-pointer"
               >
                 {getStopLabel(stop)}
                 <X className="w-3 h-3 opacity-60 group-hover:opacity-100" />
@@ -503,7 +503,7 @@ export default function FilterPanel({
               <button
                 key={`airline-${code}`}
                 onClick={() => handleAirlineChange(code)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group cursor-pointer"
               >
                 {carriers[code] || code}
                 <X className="w-3 h-3 opacity-60 group-hover:opacity-100" />
@@ -519,7 +519,7 @@ export default function FilterPanel({
                     priceRange: [priceStats.min, priceStats.max],
                   });
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors group cursor-pointer"
               >
                 ${filters.priceRange[0].toLocaleString()} - ${filters.priceRange[1].toLocaleString()}
                 <X className="w-3 h-3 opacity-60 group-hover:opacity-100" />

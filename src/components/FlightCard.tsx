@@ -214,7 +214,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
               </div>
               <div className="text-xs text-gray-500">per person</div>
             </div>
-            <button className="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 active:scale-95 transition-all duration-150 shadow-lg shadow-blue-600/20 group-hover:shadow-blue-600/30 flex items-center gap-2">
+            <button className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition-all duration-150 shadow-lg shadow-blue-600/20 group-hover:shadow-blue-600/30 flex items-center gap-2 cursor-pointer">
               Select
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
@@ -228,7 +228,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
-            className="w-full flex items-center justify-between text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="w-full flex items-center justify-between text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-1.5">
