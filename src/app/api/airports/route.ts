@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchAirports } from "@/lib/amadeus";
+import { searchAirports } from "@/lib/api/amadeus-service";
+import { airportSearchSchema } from "@/lib/validations/schemas";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const keyword = searchParams.get("keyword");
+  const keyword = searchParams.get("keyword") || "";
 
-  if (!keyword || keyword.length < 2) {
+  // Validate with Zod
+  const result = airportSearchSchema.safeParse({ keyword });
+
+  if (!result.success) {
     return NextResponse.json({ airports: [] });
   }
 
   try {
-    const response = await searchAirports(keyword);
+    const response = await searchAirports(result.data.keyword);
 
     const airports = response.data.map((location) => ({
       id: location.id,

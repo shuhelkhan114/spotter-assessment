@@ -1,76 +1,40 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Flight, SearchParams } from "@/lib/types";
+import { useMutation } from "@tanstack/react-query";
+import {
+  searchFlights,
+  FlightSearchParams,
+  FlightSearchResponse,
+} from "@/lib/api/flights";
+import { SearchParams } from "@/lib/types";
 
-interface UseFlightSearchReturn {
-  flights: Flight[];
-  carriers: Record<string, string>;
-  isLoading: boolean;
-  error: string | null;
-  search: (params: SearchParams) => Promise<void>;
+// Transform SearchParams (from form) to FlightSearchParams (for API)
+function transformToApiParams(params: SearchParams): FlightSearchParams {
+  return {
+    origin: params.origin,
+    destination: params.destination,
+    departureDate: params.departureDate,
+    returnDate: params.returnDate || undefined,
+    adults: params.passengers.adults,
+    children: params.passengers.children,
+    infants: params.passengers.infants,
+    nonStop: params.nonStop,
+    maxPrice: params.maxPrice,
+    includedAirlineCodes: params.includedAirlineCodes,
+  };
 }
 
-export function useFlightSearch(): UseFlightSearchReturn {
-  const [flights, setFlights] = useState<Flight[]>([]);
-  const [carriers, setCarriers] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function useFlightSearch() {
+  const mutation = useMutation<FlightSearchResponse, Error, SearchParams>({
+    mutationFn: (params) => searchFlights(transformToApiParams(params)),
+  });
 
-  const search = useCallback(async (params: SearchParams) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const searchParams = new URLSearchParams({
-        origin: params.origin,
-        destination: params.destination,
-        departureDate: params.departureDate,
-        adults: params.passengers.adults.toString(),
-      });
-
-      if (params.passengers.children > 0) {
-        searchParams.append("children", params.passengers.children.toString());
-      }
-
-      if (params.passengers.infants > 0) {
-        searchParams.append("infants", params.passengers.infants.toString());
-      }
-
-      if (params.tripType === "roundtrip" && params.returnDate) {
-        searchParams.append("returnDate", params.returnDate);
-      }
-
-      // API-level filters
-      if (params.nonStop) {
-        searchParams.append("nonStop", "true");
-      }
-
-      if (params.maxPrice && params.maxPrice > 0) {
-        searchParams.append("maxPrice", params.maxPrice.toString());
-      }
-
-      if (params.includedAirlineCodes && params.includedAirlineCodes.length > 0) {
-        searchParams.append("includedAirlineCodes", params.includedAirlineCodes.join(","));
-      }
-
-      const response = await fetch(`/api/flights?${searchParams.toString()}`);
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to search flights");
-      }
-
-      const data = await response.json();
-      setFlights(data.flights);
-      setCarriers(data.carriers || {});
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setFlights([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  return { flights, carriers, isLoading, error, search };
+  return {
+    flights: mutation.data?.flights || [],
+    carriers: mutation.data?.carriers || {},
+    isLoading: mutation.isPending,
+    error: mutation.error?.message || null,
+    search: mutation.mutate,
+    reset: mutation.reset,
+  };
 }

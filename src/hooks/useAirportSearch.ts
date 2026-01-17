@@ -1,15 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { searchAirports, Airport } from "@/lib/api/airports";
 
-export interface Airport {
-  id: string;
-  code: string;
-  name: string;
-  city: string;
-  country: string;
-  type: string;
-}
+export type { Airport } from "@/lib/api/airports";
 
 interface UseAirportSearchReturn {
   airports: Airport[];
@@ -51,20 +45,11 @@ export function useAirportSearch(): UseAirportSearchReturn {
       abortControllerRef.current = new AbortController();
 
       try {
-        const response = await fetch(
-          `/api/airports?keyword=${encodeURIComponent(keyword)}`,
-          { signal: abortControllerRef.current.signal }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to search airports");
-        }
-
-        const data = await response.json();
-        setAirports(data.airports || []);
+        const response = await searchAirports(keyword);
+        setAirports(response.airports || []);
         setError(null);
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
+        if (err instanceof Error && err.name === "CanceledError") {
           return;
         }
         setError(err instanceof Error ? err.message : "An error occurred");

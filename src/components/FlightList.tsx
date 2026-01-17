@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Flight } from "@/lib/types";
 import FlightCard from "./FlightCard";
 import { Plane, AlertCircle, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
@@ -83,13 +84,62 @@ function FlightSkeleton() {
 }
 
 export default function FlightList({ flights, isLoading, error, totalCount }: FlightListProps) {
-  const [sortBy, setSortBy] = useState<SortOption>("price");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  // Get page and sort from URL params
+  const currentPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const sortBy = (searchParams.get("sort") as SortOption) || "price";
+
+  // Validate sortBy is a valid option
+  const validSortBy = sortOptions.some((o) => o.value === sortBy) ? sortBy : "price";
+
+  const updateUrlParams = useCallback(
+    (updates: { page?: number; sort?: SortOption }) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (updates.page !== undefined) {
+        if (updates.page === 1) {
+          params.delete("page");
+        } else {
+          params.set("page", updates.page.toString());
+        }
+      }
+
+      if (updates.sort !== undefined) {
+        if (updates.sort === "price") {
+          params.delete("sort");
+        } else {
+          params.set("sort", updates.sort);
+        }
+      }
+
+      const queryString = params.toString();
+      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    },
+    [searchParams, router, pathname]
+  );
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePageChange = (page: number) => {
+    updateUrlParams({ page });
+    scrollToTop();
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    updateUrlParams({ sort, page: 1 });
+    setShowSortDropdown(false);
+  };
 
   const sortedFlights = useMemo(() => {
     return [...flights].sort((a, b) => {
-      switch (sortBy) {
+      switch (validSortBy) {
         case "price":
           return a.price - b.price;
         case "duration":
@@ -102,12 +152,19 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
           return 0;
       }
     });
-  }, [flights, sortBy]);
+  }, [flights, validSortBy]);
 
-  // Reset page when flights change
-  useMemo(() => {
-    setCurrentPage(1);
-  }, [flights.length]);
+  // Reset page to 1 when flights change (new search)
+  const [prevFlightsLength, setPrevFlightsLength] = useState(flights.length);
+  useEffect(() => {
+    if (flights.length !== prevFlightsLength && flights.length > 0) {
+      setPrevFlightsLength(flights.length);
+      // Only reset if not already on page 1
+      if (currentPage !== 1) {
+        updateUrlParams({ page: 1 });
+      }
+    }
+  }, [flights.length, prevFlightsLength, currentPage, updateUrlParams]);
 
   const totalPages = Math.ceil(sortedFlights.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -179,7 +236,7 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <ArrowUpDown className="w-4 h-4 text-gray-400" />
-            <span>{sortOptions.find((o) => o.value === sortBy)?.label}</span>
+            <span>{sortOptions.find((o) => o.value === validSortBy)?.label}</span>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showSortDropdown ? "rotate-180" : ""}`} />
           </button>
 
@@ -188,12 +245,9 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
               {sortOptions.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => {
-                    setSortBy(option.value);
-                    setShowSortDropdown(false);
-                  }}
+                  onClick={() => handleSortChange(option.value)}
                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
-                    sortBy === option.value
+                    validSortBy === option.value
                       ? "text-blue-600 font-medium bg-blue-50"
                       : "text-gray-700"
                   }`}
@@ -218,7 +272,7 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
@@ -241,7 +295,7 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
                 return (
                   <button
                     key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => handlePageChange(pageNum)}
                     className={`w-9 h-9 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                       currentPage === pageNum
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
@@ -255,7 +309,7 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
             </div>
 
             <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
