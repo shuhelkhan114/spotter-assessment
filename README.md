@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Flight Search
+
+A flight search application built with Next.js 16 and React 19 that integrates with the Amadeus API.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env.local` file with your Amadeus API credentials:
 
-## Learn More
+```
+AMADEUS_CLIENT_ID=your_client_id
+AMADEUS_CLIENT_SECRET=your_client_secret
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### API Layer
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application uses a two-tier API pattern. Internal route handlers (`/api/flights`, `/api/airports`) validate requests with Zod, then forward them to the Amadeus API. This keeps credentials server-side and allows response transformation before reaching the client.
 
-## Deploy on Vercel
+The Amadeus client handles OAuth 2.0 authentication with automatic token refresh. Tokens are cached and refreshed 60 seconds before expiry.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### State Management
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **React Query** manages server state with a 60-second stale time
+- **URL query parameters** persist all application state (search params, filters, pagination, sort order)
+- **Local component state** handles UI interactions like the price slider before committing changes
+
+URL-based state enables shareable links and browser navigation support.
+
+### Data Flow
+
+```
+SearchForm -> URL params -> useFlightSearch hook -> /api/flights -> Amadeus API
+                                                          |
+                                                   Transform response
+                                                          |
+                                           FilterPanel (client-side filtering)
+                                                          |
+                                           FlightList (sort + paginate)
+```
+
+### Component Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── airports/route.ts
+│   │   └── flights/route.ts
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── FilterPanel.tsx
+│   ├── FlightCard.tsx
+│   ├── FlightList.tsx
+│   ├── PriceGraph.tsx
+│   ├── SearchForm.tsx
+│   ├── filters/
+│   └── search-form/
+├── hooks/
+│   ├── useFlightSearch.ts
+│   └── useAirportSearch.ts
+└── lib/
+    ├── api/
+    │   ├── amadeus-client.ts
+    │   ├── amadeus-service.ts
+    │   └── ...
+    ├── types.ts
+    ├── utils/
+    └── validations/
+```
+
+### Filtering and Sorting
+
+Filtering happens client-side with `useMemo`. Available filter options (airlines, stop counts) are computed from the actual flight results. Sorting supports price, duration, departure time, and number of stops. Pagination displays 20 results per page.
+
+### Validation
+
+Three layers of validation:
+1. Client-side form validation with React Hook Form
+2. Server-side request validation with Zod schemas
+3. Business logic validation (date ordering, passenger limits)
+
+Passenger rules enforce a maximum of 9 total passengers, with infants limited to the number of adults.
+
+## Technical Decisions
+
+**Why internal API routes?**
+Keeps Amadeus credentials on the server. Also allows request/response transformation and consistent error handling.
+
+**Why URL-based state?**
+Users can share search results, use browser back/forward, and bookmark specific searches. The URL is the single source of truth for the application state.
+
+**Why client-side filtering?**
+The Amadeus API returns all matching flights. Client-side filtering provides instant feedback when adjusting stops, price range, or airline filters without additional API calls.
+
+**Why React Query?**
+Handles caching, background refetching, and loading/error states. The flight search uses a mutation since each search is a distinct operation, not a cached resource.
+
+**Why Tailwind?**
+Rapid styling with utility classes. The responsive design uses a mobile-first approach with breakpoints for larger screens.
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| @tanstack/react-query | Server state management |
+| axios | HTTP client |
+| react-hook-form | Form state |
+| zod | Schema validation |
+| react-day-picker | Date selection |
+| recharts | Price trend graph |
+| lucide-react | Icons |
+| date-fns | Date formatting |
