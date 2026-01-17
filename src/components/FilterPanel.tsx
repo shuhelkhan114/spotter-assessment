@@ -64,17 +64,14 @@ export default function FilterPanel({
   // Use a key based on price stats to reset local state when flights change
   const priceStatsKey = `${priceStats.min}-${priceStats.max}`;
 
-  // Determine initial price range - use filter values if set, otherwise use price stats
-  const getInitialPriceRange = (): [number, number] => {
-    if (filters.priceRange[0] === 0 && filters.priceRange[1] === 0) {
-      return [priceStats.min, priceStats.max];
-    }
-    return filters.priceRange;
-  };
+  // Local price range for slider interaction (before committing)
+  // Use filters.priceRange if it's set, otherwise use priceStats
+  const effectivePriceRange: [number, number] =
+    filters.priceRange[0] === 0 && filters.priceRange[1] === 0
+      ? [priceStats.min, priceStats.max]
+      : filters.priceRange;
 
-  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(
-    getInitialPriceRange
-  );
+  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(effectivePriceRange);
 
   // Track the last known priceStatsKey to detect changes
   const [lastPriceStatsKey, setLastPriceStatsKey] = useState(priceStatsKey);
@@ -82,13 +79,7 @@ export default function FilterPanel({
   // When priceStats change (new search), reset local price range
   if (priceStatsKey !== lastPriceStatsKey) {
     setLastPriceStatsKey(priceStatsKey);
-    const newRange: [number, number] = [priceStats.min, priceStats.max];
-    setLocalPriceRange(newRange);
-
-    // Update parent filter if it was at default
-    if (filters.priceRange[0] === 0 && filters.priceRange[1] === 0) {
-      onFilterChange({ ...filters, priceRange: newRange });
-    }
+    setLocalPriceRange([priceStats.min, priceStats.max]);
   }
 
   const handleStopsChange = (stop: number) => {
@@ -130,8 +121,8 @@ export default function FilterPanel({
   const hasActiveFilters =
     filters.stops.length > 0 ||
     filters.airlines.length > 0 ||
-    filters.priceRange[0] > priceStats.min ||
-    filters.priceRange[1] < priceStats.max;
+    effectivePriceRange[0] > priceStats.min ||
+    effectivePriceRange[1] < priceStats.max;
 
   if (isLoading) {
     return <FilterSkeleton />;
