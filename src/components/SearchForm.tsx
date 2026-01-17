@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { ArrowRightLeft, Search } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
@@ -54,27 +54,33 @@ export default function SearchForm({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
 
-  const initializedRef = useRef(false);
+  // Track last synced initialValues to detect changes
+  const [lastInitialValuesKey, setLastInitialValuesKey] = useState(() =>
+    initialValues ? `${initialValues.origin}-${initialValues.destination}-${initialValues.departureDate}` : ""
+  );
 
-  useEffect(() => {
-    if (initialValues && !initializedRef.current) {
-      setTripType(initialValues.tripType);
-      setOrigin(initialValues.origin);
-      setDestination(initialValues.destination);
-      setPassengers(initialValues.passengers);
-      if (initialValues.tripType === "roundtrip") {
-        setDateRange({
-          from: new Date(initialValues.departureDate),
-          to: initialValues.returnDate
-            ? new Date(initialValues.returnDate)
-            : undefined,
-        });
-      } else {
-        setSingleDate(new Date(initialValues.departureDate));
-      }
-      initializedRef.current = true;
+  // Sync state when initialValues change
+  const currentInitialValuesKey = initialValues
+    ? `${initialValues.origin}-${initialValues.destination}-${initialValues.departureDate}`
+    : "";
+
+  if (initialValues && currentInitialValuesKey !== lastInitialValuesKey && lastInitialValuesKey === "") {
+    setLastInitialValuesKey(currentInitialValuesKey);
+    setTripType(initialValues.tripType);
+    setOrigin(initialValues.origin);
+    setDestination(initialValues.destination);
+    setPassengers(initialValues.passengers);
+    if (initialValues.tripType === "roundtrip") {
+      setDateRange({
+        from: new Date(initialValues.departureDate),
+        to: initialValues.returnDate
+          ? new Date(initialValues.returnDate)
+          : undefined,
+      });
+    } else {
+      setSingleDate(new Date(initialValues.departureDate));
     }
-  }, [initialValues]);
+  }
 
   const handleSwapLocations = () => {
     const temp = origin;

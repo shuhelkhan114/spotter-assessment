@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Flight } from "@/lib/types";
 import FlightCard from "./FlightCard";
@@ -156,15 +156,15 @@ export default function FlightList({ flights, isLoading, error, totalCount }: Fl
 
   // Reset page to 1 when flights change (new search)
   const [prevFlightsLength, setPrevFlightsLength] = useState(flights.length);
-  useEffect(() => {
-    if (flights.length !== prevFlightsLength && flights.length > 0) {
-      setPrevFlightsLength(flights.length);
-      // Only reset if not already on page 1
-      if (currentPage !== 1) {
-        updateUrlParams({ page: 1 });
-      }
+
+  // Detect when flights change and reset page
+  if (flights.length !== prevFlightsLength && flights.length > 0) {
+    setPrevFlightsLength(flights.length);
+    // Only reset if not already on page 1
+    if (currentPage !== 1) {
+      updateUrlParams({ page: 1 });
     }
-  }, [flights.length, prevFlightsLength, currentPage, updateUrlParams]);
+  }
 
   const totalPages = Math.ceil(sortedFlights.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;

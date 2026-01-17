@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import SearchForm from "@/components/SearchForm";
 import FlightList from "@/components/FlightList";
@@ -10,128 +10,112 @@ import { useFlightSearch } from "@/hooks/useFlightSearch";
 import { Plane, Sparkles } from "lucide-react";
 import { SearchParams } from "@/lib/types";
 
+// Helper to parse URL params into SearchParams
+function parseUrlToSearchParams(urlSearchParams: URLSearchParams): SearchParams | null {
+  const origin = urlSearchParams.get("origin");
+  const destination = urlSearchParams.get("destination");
+  const departureDate = urlSearchParams.get("departureDate");
+  const returnDate = urlSearchParams.get("returnDate") || "";
+  const adults = urlSearchParams.get("adults");
+  const children = urlSearchParams.get("children");
+  const infants = urlSearchParams.get("infants");
+  const tripType = urlSearchParams.get("tripType") as "roundtrip" | "oneway";
+
+  const stopsParam = urlSearchParams.get("stops");
+  const maxPrice = urlSearchParams.get("maxPrice");
+  const airlinesParam = urlSearchParams.get("airlines");
+
+  if (origin && destination && departureDate && adults) {
+    const params: SearchParams = {
+      origin,
+      destination,
+      departureDate,
+      returnDate,
+      passengers: {
+        adults: parseInt(adults) || 1,
+        children: parseInt(children || "0"),
+        infants: parseInt(infants || "0"),
+      },
+      tripType: tripType || (returnDate ? "roundtrip" : "oneway"),
+    };
+
+    if (stopsParam === "0") {
+      params.nonStop = true;
+    }
+    if (maxPrice) {
+      params.maxPrice = parseInt(maxPrice);
+    }
+    if (airlinesParam) {
+      params.includedAirlineCodes = airlinesParam.split(",").filter(Boolean);
+    }
+
+    return params;
+  }
+  return null;
+}
+
+// Helper to parse URL params into FilterState
+function parseUrlToFilterState(urlSearchParams: URLSearchParams): FilterState {
+  const stopsParam = urlSearchParams.get("stops");
+  const minPrice = urlSearchParams.get("minPrice");
+  const maxPrice = urlSearchParams.get("maxPrice");
+  const airlinesParam = urlSearchParams.get("airlines");
+
+  const hasFilterParams = stopsParam || minPrice || maxPrice || airlinesParam;
+
+  if (hasFilterParams) {
+    return {
+      stops: stopsParam ? stopsParam.split(",").map(Number).filter(n => !isNaN(n)) : [],
+      priceRange: [
+        minPrice ? parseInt(minPrice) : 0,
+        maxPrice ? parseInt(maxPrice) : 0,
+      ],
+      airlines: airlinesParam ? airlinesParam.split(",").filter(Boolean) : [],
+    };
+  }
+  return { stops: [], priceRange: [0, 0], airlines: [] };
+}
+
 function HomeContent() {
   const router = useRouter();
   const urlSearchParams = useSearchParams();
-  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+
+  // Initialize state from URL params
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(() =>
+    parseUrlToSearchParams(urlSearchParams)
+  );
+  const [filters, setFilters] = useState<FilterState>(() =>
+    parseUrlToFilterState(urlSearchParams)
+  );
   const [isSticky, setIsSticky] = useState(false);
   const { flights, isLoading, error, search, carriers } = useFlightSearch();
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const initialLoadRef = useRef(true);
-  const [filters, setFilters] = useState<FilterState>({
-    stops: [],
-    priceRange: [0, 0],
-    airlines: [],
-  });
+  const hasTriggeredInitialSearch = useRef(false);
 
   const filteredFlights = useMemo(() => {
     return flights.filter((flight) => {
-      // Filter by stops
       if (filters.stops.length > 0 && !filters.stops.includes(flight.stops)) {
         return false;
       }
-
-      // Filter by price range
       if (filters.priceRange[0] > 0 || filters.priceRange[1] > 0) {
         if (flight.price < filters.priceRange[0] || flight.price > filters.priceRange[1]) {
           return false;
         }
       }
-
-      // Filter by airlines
       if (filters.airlines.length > 0 && !filters.airlines.includes(flight.airlineCode)) {
         return false;
       }
-
       return true;
     });
   }, [flights, filters]);
 
-  const parseUrlParams = useCallback((): SearchParams | null => {
-    const origin = urlSearchParams.get("origin");
-    const destination = urlSearchParams.get("destination");
-    const departureDate = urlSearchParams.get("departureDate");
-    const returnDate = urlSearchParams.get("returnDate") || "";
-    const adults = urlSearchParams.get("adults");
-    const children = urlSearchParams.get("children");
-    const infants = urlSearchParams.get("infants");
-    const tripType = urlSearchParams.get("tripType") as "roundtrip" | "oneway";
-
-    // API-level filter params from URL
-    const stopsParam = urlSearchParams.get("stops");
-    const maxPrice = urlSearchParams.get("maxPrice");
-    const airlinesParam = urlSearchParams.get("airlines");
-
-    if (origin && destination && departureDate && adults) {
-      const params: SearchParams = {
-        origin,
-        destination,
-        departureDate,
-        returnDate,
-        passengers: {
-          adults: parseInt(adults) || 1,
-          children: parseInt(children || "0"),
-          infants: parseInt(infants || "0"),
-        },
-        tripType: tripType || (returnDate ? "roundtrip" : "oneway"),
-      };
-
-      // Add API-level filters if present in URL
-      // nonStop: only if stops filter is exactly [0] (nonstop only)
-      if (stopsParam === "0") {
-        params.nonStop = true;
-      }
-
-      // maxPrice: pass to API for server-side filtering
-      if (maxPrice) {
-        params.maxPrice = parseInt(maxPrice);
-      }
-
-      // includedAirlineCodes: pass to API for server-side filtering
-      if (airlinesParam) {
-        params.includedAirlineCodes = airlinesParam.split(",").filter(Boolean);
-      }
-
-      return params;
-    }
-    return null;
-  }, [urlSearchParams]);
-
-  const parseFilterParams = useCallback((): FilterState | null => {
-    const stopsParam = urlSearchParams.get("stops");
-    const minPrice = urlSearchParams.get("minPrice");
-    const maxPrice = urlSearchParams.get("maxPrice");
-    const airlinesParam = urlSearchParams.get("airlines");
-
-    const hasFilterParams = stopsParam || minPrice || maxPrice || airlinesParam;
-
-    if (hasFilterParams) {
-      return {
-        stops: stopsParam ? stopsParam.split(",").map(Number).filter(n => !isNaN(n)) : [],
-        priceRange: [
-          minPrice ? parseInt(minPrice) : 0,
-          maxPrice ? parseInt(maxPrice) : 0,
-        ],
-        airlines: airlinesParam ? airlinesParam.split(",").filter(Boolean) : [],
-      };
-    }
-    return null;
-  }, [urlSearchParams]);
-
+  // Trigger initial search on mount (only side effect, no state updates)
   useEffect(() => {
-    if (initialLoadRef.current) {
-      const params = parseUrlParams();
-      if (params) {
-        setSearchParams(params);
-        search(params);
-      }
-      const filterParams = parseFilterParams();
-      if (filterParams) {
-        setFilters(filterParams);
-      }
-      initialLoadRef.current = false;
+    if (!hasTriggeredInitialSearch.current && searchParams) {
+      hasTriggeredInitialSearch.current = true;
+      search(searchParams);
     }
-  }, [parseUrlParams, parseFilterParams, search]);
+  }, [searchParams, search]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;

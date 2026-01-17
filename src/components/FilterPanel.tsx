@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Flight } from "@/lib/types";
 import { RotateCcw, Plane } from "lucide-react";
 import {
@@ -61,26 +61,35 @@ export default function FilterPanel({
     return Array.from(airlines.values()).sort((a, b) => b.count - a.count);
   }, [flights, carriers]);
 
+  // Use a key based on price stats to reset local state when flights change
+  const priceStatsKey = `${priceStats.min}-${priceStats.max}`;
+
+  // Determine initial price range - use filter values if set, otherwise use price stats
+  const getInitialPriceRange = (): [number, number] => {
+    if (filters.priceRange[0] === 0 && filters.priceRange[1] === 0) {
+      return [priceStats.min, priceStats.max];
+    }
+    return filters.priceRange;
+  };
+
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(
-    filters.priceRange
+    getInitialPriceRange
   );
 
-  // Track if this is the initial load to set price range
-  const isInitialPriceSet = useRef(false);
+  // Track the last known priceStatsKey to detect changes
+  const [lastPriceStatsKey, setLastPriceStatsKey] = useState(priceStatsKey);
 
-  // Update local price range and parent filter when price stats change
-  useEffect(() => {
-    if (flights.length > 0 && priceStats.min > 0) {
-      const newRange: [number, number] = [priceStats.min, priceStats.max];
-      setLocalPriceRange(newRange);
+  // When priceStats change (new search), reset local price range
+  if (priceStatsKey !== lastPriceStatsKey) {
+    setLastPriceStatsKey(priceStatsKey);
+    const newRange: [number, number] = [priceStats.min, priceStats.max];
+    setLocalPriceRange(newRange);
 
-      // Only update parent filter on initial load when price range is default
-      if (!isInitialPriceSet.current && filters.priceRange[0] === 0 && filters.priceRange[1] === 0) {
-        isInitialPriceSet.current = true;
-        onFilterChange({ ...filters, priceRange: newRange });
-      }
+    // Update parent filter if it was at default
+    if (filters.priceRange[0] === 0 && filters.priceRange[1] === 0) {
+      onFilterChange({ ...filters, priceRange: newRange });
     }
-  }, [priceStats.min, priceStats.max, flights.length]);
+  }
 
   const handleStopsChange = (stop: number) => {
     const newStops = filters.stops.includes(stop)
