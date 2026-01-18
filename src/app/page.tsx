@@ -54,6 +54,14 @@ function parseUrlToSearchParams(urlSearchParams: URLSearchParams): SearchParams 
   return null;
 }
 
+// Helper to get the maximum stops for a flight (considers return flight for round trips)
+function getMaxStops(flight: { stops: number; returnFlight?: { stops: number } }): number {
+  if (flight.returnFlight) {
+    return Math.max(flight.stops, flight.returnFlight.stops);
+  }
+  return flight.stops;
+}
+
 // Helper to parse URL params into FilterState
 function parseUrlToFilterState(urlSearchParams: URLSearchParams): FilterState {
   const stopsParam = urlSearchParams.get("stops");
@@ -94,7 +102,9 @@ function HomeContent() {
 
   const filteredFlights = useMemo(() => {
     return flights.filter((flight) => {
-      if (filters.stops.length > 0 && !filters.stops.includes(flight.stops)) {
+      // For round trips, check max stops across both legs
+      const maxStops = getMaxStops(flight);
+      if (filters.stops.length > 0 && !filters.stops.includes(maxStops)) {
         return false;
       }
       if (filters.priceRange[0] > 0 || filters.priceRange[1] > 0) {
